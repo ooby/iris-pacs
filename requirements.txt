@@ -1,0 +1,5 @@
+pydicom
+pymongo
+pynetdicom
+pytest
+setuptools
