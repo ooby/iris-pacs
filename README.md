@@ -12,8 +12,8 @@
 ```bash
 git clone https://github.com/ooby/iris-pacs
 cd iris-pacs
-docker build docker -t iris-pacs --build-arg TIMEZONE="Asia/Yakutsk" --build-arg MO_CODE="5f1a32c2490e6a7389fc121c"
-# TIMEZONE - часовой пояс, где находится МО, MO_CODE - идентификатор, полученный на 1 шаге
+docker build docker -t iris-pacs --build-arg TIMEZONE="Asia/Yakutsk" --build-arg MO_CODE="5f1a32c2490e6a7389fc121c" --build-arg ADDRESS="0.0.0.0" --build-arg PORT="104"
+# TIMEZONE - часовой пояс, где находится МО, MO_CODE - идентификатор, полученный на 1 шаге, ADDRESS - IP-адрес, PORT - порт
 ```
 3. Запустить `docker`-контейнер c правильными аргументами
 ```bash
