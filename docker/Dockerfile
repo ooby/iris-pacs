@@ -21,4 +21,6 @@ RUN mkdir /data/scans
 RUN mkdir /data/db
 WORKDIR /iris-pacs
 
-CMD pip3 install -e . && python3 start.py 0.0.0.0 104
+ARG ADDRESS
+ARG PORT
+CMD pip3 install -e . && python3 start.py ${ADDRESS} ${PORT}}
