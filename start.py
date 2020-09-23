@@ -27,9 +27,10 @@ def main():
         ae.ae_title = b'IRIS-PACS'
         storage_sop_classes = [
             cx.abstract_syntax for cx in AllStoragePresentationContexts]
+        storage_sop_classes.append('1.2.840.10008.3.1.1.1')
         for uid in storage_sop_classes:
-            if uid == '1.2.840.10008.5.1.4.1.1.2':
-                ae.add_supported_context(uid, ALL_TRANSFER_SYNTAXES)
+            # if uid == '1.2.840.10008.5.1.4.1.1.2':
+            ae.add_supported_context(uid, ALL_TRANSFER_SYNTAXES)
 
         handlers = [
             (evt.EVT_CONN_OPEN, handle_open, [LOGGER]),

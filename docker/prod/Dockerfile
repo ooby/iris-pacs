@@ -2,7 +2,7 @@ FROM ubuntu:focal
 
 RUN apt-get update
 RUN apt-get upgrade -y
-RUN apt-get install git -y
+RUN apt-get install git python3-dev python3-pip -y
 RUN pip3 install pip --upgrade
 RUN pip3 install pydicom pymongo pynetdicom pytest setuptools
 
@@ -12,6 +12,10 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 ARG MO_CODE
 RUN touch /code && echo "${MO_CODE}" > /code
+ARG ADDRESS
+RUN touch /address && echo "${ADDRESS}" > /address
+ARG PORT
+RUN touch /port && echo "${PORT}" > /port
 
 WORKDIR /
 RUN git clone https://github.com/ooby/iris-pacs iris-pacs
@@ -21,6 +25,4 @@ RUN mkdir /data/scans
 RUN mkdir /data/db
 WORKDIR /iris-pacs
 
-ARG ADDRESS
-ARG PORT
-CMD pip3 install -e . && python3 start.py ${ADDRESS} ${PORT}}
+CMD pip3 install -e . && python3 start.py $(cat /address) $(cat /port)
