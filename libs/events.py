@@ -25,7 +25,7 @@ def handle_open(event, LOGGER):
 
 
 def handle_echo(event, LOGGER):
-    LOGGER.info(f'C-ECHO from { event.address }')
+    LOGGER.info(f'C-ECHO OK was sent for { event.assoc }')
     return 0x0000
 
 
