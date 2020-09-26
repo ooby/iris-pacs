@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 
-from libs.events import handle_close, handle_open, handle_store, handle_echo
+from libs.events import handle_close, handle_open, handle_store, handle_echo, handle_find, handle_get
 from pynetdicom import (
     AE, evt, debug_logger, AllStoragePresentationContexts,
     ALL_TRANSFER_SYNTAXES, build_context
@@ -36,6 +36,8 @@ def main():
             (evt.EVT_CONN_OPEN, handle_open, [LOGGER]),
             (evt.EVT_C_STORE, handle_store, ['/data/scans', LOGGER, MO_CODE]),
             (evt.EVT_C_ECHO, handle_echo, [LOGGER]),
+            (evt.EVT_C_FIND, handle_find, [LOGGER]),
+            (evt.EVT_C_GET, handle_get, [LOGGER]),
             (evt.EVT_CONN_CLOSE, handle_close, [LOGGER, MO_CODE])
         ]
         print(f'Starting Store SCU at {port} port for {MO_CODE}')
