@@ -10,11 +10,6 @@ ARG TIMEZONE
 ENV TZ="${TIMEZONE}"
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-RUN wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | apt-key add -
-RUN echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list
-RUN apt-get update
-RUN apt-get install mongodb-org -y
-
 ARG MO_CODE
 RUN touch /code && echo "${MO_CODE}" > /code
 ARG ADDRESS
@@ -25,5 +20,4 @@ RUN touch /port && echo "${PORT}" > /port
 RUN mkdir /data
 RUN mkdir /data/scans
 RUN mkdir /data/db
-RUN systemctl start mongod
 WORKDIR /data
