@@ -1,5 +1,5 @@
 .DS_Store
 scans
-db
+./db
 __pycache__
 *.egg-info
