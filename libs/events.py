@@ -1,5 +1,8 @@
 import os
+from pydicom import dcmread
+from pydicom.dataset import Dataset
 from pydicom.filewriter import write_file_meta_info
+from .io import get_studies
 
 
 def handle_store(event, path, LOGGER, code):
@@ -25,13 +28,69 @@ def handle_open(event, LOGGER):
 
 
 def handle_find(event, LOGGER):
-    LOGGER.info(f'C-FIND NOT IMPLEMENTED')
-    return 0xC311
+    """Handle a C-FIND request event."""
+    ds = event.identifier
+
+    instances = get_studies(stop_before_pixels=True)
+
+    if 'QueryRetrieveLevel' not in ds:
+        yield 0xC000, None
+        return
+
+    # matching = []
+    # if ds.QueryRetrieveLevel == 'STUDY':
+    #     if 'StudyID' in ds:
+    #         matching.append()
+
+    # if ds.QueryRetrieveLevel == 'PATIENT':
+    #     if 'PatientName' in ds:
+    #         if ds.PatientName not in ['*', '', '?']:
+    #             matching = [
+    #                 inst for inst in instances if inst.PatientName == ds.PatientName]
+
+    for instance in instances:
+        # Check if C-CANCEL has been received
+        if event.is_cancelled:
+            yield (0xFE00, None)
+            return
+        # identifier = Dataset()
+        # identifier.StudyID = instance.StudyID
+        # identifier.PatientName = instance.PatientName
+        # identifier.PatientID = instance.PatientID
+        # identifier.StudyDate = instance.StudyDate
+        # identifier.StudyTime = instance.StudyTime
+        # identifier.QueryRetrieveLevel = ds.QueryRetrieveLevel
+        yield (0xFF00, instance)
 
 
 def handle_get(event, LOGGER):
-    LOGGER.info(f'C-GET NOT IMPLEMENTED')
-    return 0xC411
+    """Handle a C-GET request event."""
+    ds = event.identifier
+    if 'QueryRetrieveLevel' not in ds:
+        # Failure
+        yield 0xC000, None
+        return
+    
+    instances = get_studies(stop_before_pixels=True)
+
+    matching = []
+    if ds.QueryRetrieveLevel == 'PATIENT':
+        if 'PatientID' in ds:
+            matching = [inst for inst in instances if inst.PatientID == ds.PatientID]
+
+    if ds.QueryRetrieveLevel == 'STUDY':
+        if 'StudyInstanceUID' in ds:
+            matching = [inst for inst in instances if inst.StudyInstanceUID == ds.StudyInstanceUID]
+
+    yield len(instances)
+
+    for instance in matching:
+        # Check if C-CANCEL has been received
+        if event.is_cancelled:
+            yield (0xFE00, None)
+            return
+        # Pending
+        yield (0xFF00, instance)
 
 
 def handle_echo(event, LOGGER):

@@ -8,6 +8,10 @@ from pynetdicom import (
     AE, evt, debug_logger, AllStoragePresentationContexts,
     ALL_TRANSFER_SYNTAXES, build_context
 )
+from pynetdicom.sop_class import (
+    PatientRootQueryRetrieveInformationModelGet,
+    CTImageStorage
+)
 
 
 def main():
@@ -25,13 +29,20 @@ def main():
 
         ae = AE()
         ae.ae_title = b'IRIS-PACS'
+        for cx in ae.supported_contexts:
+            cx.scp_role = True
+            cx.scu_role = True
+        ae.add_requested_context(PatientRootQueryRetrieveInformationModelGet)
+        ae.add_requested_context(CTImageStorage)
         storage_sop_classes = [
             cx.abstract_syntax for cx in AllStoragePresentationContexts]
         storage_sop_classes.append('1.2.840.10008.1.1')
+        storage_sop_classes.append('1.2.840.10008.5.1.4.1.2.1.1')
+        storage_sop_classes.append('1.2.840.10008.5.1.4.1.2.1.3')
+        storage_sop_classes.append('1.2.840.10008.5.1.4.1.2.2.1')
+        storage_sop_classes.append('1.2.840.10008.5.1.4.1.2.2.3')
         for uid in storage_sop_classes:
-            # if uid == '1.2.840.10008.5.1.4.1.1.2':
             ae.add_supported_context(uid, ALL_TRANSFER_SYNTAXES)
-
         handlers = [
             (evt.EVT_CONN_OPEN, handle_open, [LOGGER]),
             (evt.EVT_C_STORE, handle_store, ['/data/scans', LOGGER, MO_CODE]),
