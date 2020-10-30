@@ -1,24 +1,31 @@
 import os
+import random
+import string
 from pydicom import dcmread
 from pydicom.dataset import Dataset
 from pydicom.filewriter import write_file_meta_info
 from .io import get_studies
 
 
+def get_random_string(length):
+    letters = string.ascii_lowercase
+    return ''.join(random.choice(letters) for i in range(length))
+
+
 def handle_store(event, path, LOGGER, code):
     # GUID = ''  # TODO: Add GUID from pymongo table new record with data check
-    # path = os.path.join(path, GUID)
-    # try:
-    #     os.makedirs(path, exist_ok=True)
-    # except:
-    #     return 0xC001
-    # fname = os.path.join(path, event.request.AffectedSOPInstanceUID)
-    # with open(fname, 'wb') as f:
-    #     f.write(b'\x00' * 128)
-    #     f.write(b'DICM')
-    #     write_file_meta_info(f, event.file_meta)
-    #     f.write(event.request.DataSet.getvalue())
-    # LOGGER.info(f'Written data in { fname }')
+    path = os.path.join(path, get_random_string(10))
+    try:
+        os.makedirs(path, exist_ok=True)
+    except:
+        return 0xC001
+    fname = os.path.join(path, event.request.AffectedSOPInstanceUID)
+    with open(fname, 'wb') as f:
+        f.write(b'\x00' * 128)
+        f.write(b'DICM')
+        write_file_meta_info(f, event.file_meta)
+        f.write(event.request.DataSet.getvalue())
+    LOGGER.info(f'Written data in { fname }')
     LOGGER.info(f'C-STORE for {event.request.AffectedSOPInstanceUID}')
     return 0x0000
 
@@ -70,17 +77,19 @@ def handle_get(event, LOGGER):
         # Failure
         yield 0xC000, None
         return
-    
+
     instances = get_studies(stop_before_pixels=True)
 
     matching = []
     if ds.QueryRetrieveLevel == 'PATIENT':
         if 'PatientID' in ds:
-            matching = [inst for inst in instances if inst.PatientID == ds.PatientID]
+            matching = [
+                inst for inst in instances if inst.PatientID == ds.PatientID]
 
     if ds.QueryRetrieveLevel == 'STUDY':
         if 'StudyInstanceUID' in ds:
-            matching = [inst for inst in instances if inst.StudyInstanceUID == ds.StudyInstanceUID]
+            matching = [
+                inst for inst in instances if inst.StudyInstanceUID == ds.StudyInstanceUID]
 
     yield len(instances)
 
