@@ -1,20 +1,16 @@
 import os
-import random
-import string
 from pydicom import dcmread
 from pydicom.dataset import Dataset
 from pydicom.filewriter import write_file_meta_info
 from .io import get_studies
 
 
-def get_random_string(length):
-    letters = string.ascii_lowercase
-    return ''.join(random.choice(letters) for i in range(length))
-
-
 def handle_store(event, path, LOGGER, code):
     # GUID = ''  # TODO: Add GUID from pymongo table new record with data check
-    path = os.path.join(path, get_random_string(10))
+    if event.dataset.SeriesInstanceUID:
+        path = os.path.join(path, event.dataset.StudyInstanceUID, event.dataset.SeriesInstanceUID)
+    else:
+        path = os.path.join(path, event.dataset.StudyInstanceUID)
     try:
         os.makedirs(path, exist_ok=True)
     except:
