@@ -3,3 +3,6 @@ scans
 ./db
 __pycache__
 *.egg-info
+mqtest_receive.py
+mqtest_send.py
+db_test.py

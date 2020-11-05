@@ -1,4 +1,3 @@
-
 import os
 import pydicom as dicom
 
@@ -17,7 +16,8 @@ def is_dicom(path: str) -> bool:
 
 def dicoms_list_in_dir(directory: str = '.') -> List[str]:
     directory = os.path.expanduser(directory)
-    candidates = [os.path.join(directory, f) for f in sorted(os.listdir(directory))]
+    candidates = [os.path.join(directory, f)
+                  for f in sorted(os.listdir(directory))]
     return [f for f in candidates if is_dicom(f)]
 
 
@@ -34,6 +34,7 @@ def batch_reader(scanpath: str) -> List[Dict]:
             scan['path'] = root
             scans.append(scan)
     return scans
+
 
 def get_studies(stop_before_pixels=False):
     '''
