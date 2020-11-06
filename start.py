@@ -2,7 +2,6 @@ import asyncio
 import logging
 import os
 import sys
-import pika
 import pymongo
 
 from bson.objectid import ObjectId
@@ -51,9 +50,6 @@ def main():
             ae.add_supported_context(uid, ALL_TRANSFER_SYNTAXES)
         client = pymongo.MongoClient(DB_ADDRESS, DB_PORT)
         db = client['iris-pacs']
-        connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=MQ_HOST))
-        MQ_CHANNEL = connection.channel()
         handlers = [
             (evt.EVT_CONN_OPEN, handle_open, [
              '/data/scans', LOGGER, db, MO_CODE]),
@@ -61,8 +57,7 @@ def main():
             (evt.EVT_C_ECHO, handle_echo, [LOGGER]),
             (evt.EVT_C_FIND, handle_find, [LOGGER]),
             (evt.EVT_C_GET, handle_get, [LOGGER]),
-            (evt.EVT_CONN_CLOSE, handle_close,
-             [LOGGER, db, MO_CODE, MQ_CHANNEL])
+            (evt.EVT_CONN_CLOSE, handle_close, [LOGGER, db, MO_CODE, MQ_HOST])
         ]
         print(f'Starting Store SCU at {port} port for {MO_CODE}')
         ae.start_server((address, port), evt_handlers=handlers)
