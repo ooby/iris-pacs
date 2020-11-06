@@ -1,5 +1,6 @@
 import datetime
 import os
+import pika
 import uuid
 from pydicom import dcmread
 from pydicom.dataset import Dataset
@@ -58,12 +59,15 @@ def handle_echo(event, LOGGER):
     return 0x0000
 
 
-def handle_close(event, LOGGER, db, code, channel):
+def handle_close(event, LOGGER, db, code, MQ_HOST):
     studies = db['studies']
     study_record = studies.find_one({'assoc': event.assoc.name})
     queue = 'processing'
     message = study_record['studyUid']
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQ_HOST))
+    channel = connection.channel()
     channel.queue_declare(queue=queue)
     channel.basic_publish(exchange='', routing_key=queue, body=message)
     print(f'[x] Sent {message} for {queue} queue')
+    connection.close()
     LOGGER.info(f'Connection closed with remote at { event.address }')
