@@ -18,27 +18,28 @@ from pynetdicom.sop_class import (
 
 
 def main():
+    '''Main'''
     if len(sys.argv) < 6:
-        print(f'Not enough arguments. python3 start.py ADDRESS PORT MQ_HOST DB_ADDRESS DB_PORT')
+        print('Not enough arguments. python3 start.py ADDRESS PORT MQ_HOST DB_ADDRESS DB_PORT')
     else:
         address = sys.argv[1]
         port = int(sys.argv[2])
-        MQ_HOST = sys.argv[3]
-        DB_ADDRESS = sys.argv[4]
-        DB_PORT = int(sys.argv[5])
-        with open('/code', 'r') as fp:
-            line = fp.readline()
+        mq_host = sys.argv[3]
+        db_address = sys.argv[4]
+        db_port = int(sys.argv[5])
+        with open('/code', 'r') as f_p:
+            line = f_p.readline()
             line = line.rstrip('\n')
-            MO_CODE = line
-        logging.basicConfig(level=logging.DEBUG)
-        LOGGER = logging.getLogger('pynetdicom')
-        ae = AE()
-        ae.ae_title = b'IRIS-PACS'
-        for cx in ae.supported_contexts:
-            cx.scp_role = True
-            cx.scu_role = True
-        ae.add_requested_context(PatientRootQueryRetrieveInformationModelGet)
-        ae.add_requested_context(CTImageStorage)
+            mo_code = line
+        logging.basicConfig(level=logging.INFO)
+        logger = logging.getLogger('pynetdicom')
+        ae_app = AE()
+        ae_app.ae_title = b'IRIS-PACS'
+        for cx_supported in ae_app.supported_contexts:
+            cx_supported.scp_role = True
+            cx_supported.scu_role = True
+        ae_app.add_requested_context(PatientRootQueryRetrieveInformationModelGet)
+        ae_app.add_requested_context(CTImageStorage)
         storage_sop_classes = [
             cx.abstract_syntax for cx in AllStoragePresentationContexts]
         storage_sop_classes.append('1.2.840.10008.1.1')
@@ -47,20 +48,20 @@ def main():
         storage_sop_classes.append('1.2.840.10008.5.1.4.1.2.2.1')
         storage_sop_classes.append('1.2.840.10008.5.1.4.1.2.2.3')
         for uid in storage_sop_classes:
-            ae.add_supported_context(uid, ALL_TRANSFER_SYNTAXES)
-        client = pymongo.MongoClient(DB_ADDRESS, DB_PORT)
-        db = client['iris-pacs']
+            ae_app.add_supported_context(uid, ALL_TRANSFER_SYNTAXES)
+        client = pymongo.MongoClient(db_address, db_port)
+        db_client = client['iris-pacs']
         handlers = [
             (evt.EVT_CONN_OPEN, handle_open, [
-             '/data/scans', LOGGER, db, MO_CODE]),
-            (evt.EVT_C_STORE, handle_store, [LOGGER, db, MO_CODE]),
-            (evt.EVT_C_ECHO, handle_echo, [LOGGER]),
-            (evt.EVT_C_FIND, handle_find, [LOGGER]),
-            (evt.EVT_C_GET, handle_get, [LOGGER]),
-            (evt.EVT_CONN_CLOSE, handle_close, [LOGGER, db, MO_CODE, MQ_HOST])
+             '/data/scans', logger, db_client, mo_code]),
+            (evt.EVT_C_STORE, handle_store, [logger, db_client, mo_code]),
+            (evt.EVT_C_ECHO, handle_echo, [logger]),
+            (evt.EVT_C_FIND, handle_find, [logger]),
+            (evt.EVT_C_GET, handle_get, [logger]),
+            (evt.EVT_CONN_CLOSE, handle_close, [logger, db_client, mo_code, mq_host])
         ]
-        print(f'Starting Store SCU at {port} port for {MO_CODE}')
-        ae.start_server((address, port), evt_handlers=handlers)
+        print(f'Starting Store SCU at {port} port for {mo_code}')
+        ae_app.start_server((address, port), evt_handlers=handlers)
 
 
 if __name__ == "__main__":

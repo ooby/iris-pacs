@@ -16,8 +16,10 @@ docker build docker/prod -t iris-pacs \
 --build-arg TIMEZONE="Asia/Yakutsk" \
 --build-arg MO_CODE="5f2443772fe1e27805629ccd" \
 --build-arg ADDRESS="0.0.0.0" \
---build-arg PORT="104"
-# TIMEZONE - часовой пояс, где находится МО, MO_CODE - идентификатор, полученный на 1 шаге, ADDRESS - IP-адрес, PORT - порт
+--build-arg PORT="104" \
+--build-arg MQ_HOST="192.168.0.1" \
+--build-arg DB_ADDRESS="192.168.0.2" \
+--build-arg DB_PORT="27017"
 ```
 3. Запустить `docker`-контейнер c правильными аргументами
 ```bash
