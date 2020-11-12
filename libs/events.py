@@ -64,7 +64,7 @@ def handle_close(event, LOGGER, db, code, MQ_HOST):
     study_record = studies.find_one({'assoc': event.assoc.name})
     queue = 'processing'
     message = study_record['studyUid']
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQ_HOST))
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQ_HOST, port=5672))
     channel = connection.channel()
     channel.queue_declare(queue=queue)
     channel.basic_publish(exchange='', routing_key=queue, body=message)
