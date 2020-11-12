@@ -16,13 +16,19 @@ ARG ADDRESS
 RUN touch /address && echo "${ADDRESS}" > /address
 ARG PORT
 RUN touch /port && echo "${PORT}" > /port
+ARG MQ_HOST 
+RUN touch /mq_host && echo "${MQ_HOST}" > /mq_host
+ARG DB_ADDRESS
+RUN touch /db_address && echo "${DB_ADDRESS}" > /db_address
+ARG DB_PORT
+RUN touch db_port && echo "${DB_PORT}" > /db_port
+
 
 WORKDIR /
 RUN git clone https://github.com/ooby/iris-pacs iris-pacs
 
 RUN mkdir /data
 RUN mkdir /data/scans
-RUN mkdir /data/db
 WORKDIR /iris-pacs
 
-CMD pip3 install -e . && python3 start.py $(cat /address) $(cat /port)
+CMD pip3 install -e . && python3 start.py $(cat /address) $(cat /port) $(cat /mq_host) $(cat /db_address) $(cat /db_port)
