@@ -19,48 +19,35 @@ from pynetdicom.sop_class import (
 
 def main():
     '''Main'''
-    if len(sys.argv) < 6:
-        print('Not enough arguments. python3 start.py ADDRESS PORT MQ_HOST DB_ADDRESS DB_PORT')
+    if len(sys.argv) < 5:
+        print('Not enough arguments. python3 start.py SCU_PORT MQ_HOST DB_ADDRESS DB_PORT')
     else:
-        address = sys.argv[1]
-        port = int(sys.argv[2])
-        mq_host = sys.argv[3]
-        db_address = sys.argv[4]
-        db_port = int(sys.argv[5])
-        with open('/code', 'r') as f_p:
-            line = f_p.readline()
-            line = line.rstrip('\n')
-            mo_code = line
+        address = '0.0.0.0'
+        port = int(sys.argv[1])
+        mq_host = sys.argv[2]
+        db_address = sys.argv[3]
+        db_port = int(sys.argv[4])
+
         logging.basicConfig(level=logging.INFO)
         logger = logging.getLogger('pynetdicom')
         ae_app = AE()
         ae_app.ae_title = b'IRIS-PACS'
-        for cx_supported in ae_app.supported_contexts:
-            cx_supported.scp_role = True
-            cx_supported.scu_role = True
-        ae_app.add_requested_context(PatientRootQueryRetrieveInformationModelGet)
-        ae_app.add_requested_context(CTImageStorage)
-        storage_sop_classes = [
-            cx.abstract_syntax for cx in AllStoragePresentationContexts]
+        storage_sop_classes = []
         storage_sop_classes.append('1.2.840.10008.1.1')
-        storage_sop_classes.append('1.2.840.10008.5.1.4.1.2.1.1')
-        storage_sop_classes.append('1.2.840.10008.5.1.4.1.2.1.3')
-        storage_sop_classes.append('1.2.840.10008.5.1.4.1.2.2.1')
-        storage_sop_classes.append('1.2.840.10008.5.1.4.1.2.2.3')
+        storage_sop_classes.append('1.2.840.10008.5.1.4.1.1')
         for uid in storage_sop_classes:
             ae_app.add_supported_context(uid, ALL_TRANSFER_SYNTAXES)
         client = pymongo.MongoClient(db_address, db_port)
         db_client = client['iris-pacs']
         handlers = [
-            (evt.EVT_CONN_OPEN, handle_open, [
-             '/data/scans', logger, db_client, mo_code]),
-            (evt.EVT_C_STORE, handle_store, [logger, db_client, mo_code]),
+            (evt.EVT_CONN_OPEN, handle_open, ['/data/scans', logger, db_client]),
+            (evt.EVT_C_STORE, handle_store, [logger, db_client]),
             (evt.EVT_C_ECHO, handle_echo, [logger]),
             (evt.EVT_C_FIND, handle_find, [logger]),
             (evt.EVT_C_GET, handle_get, [logger]),
-            (evt.EVT_CONN_CLOSE, handle_close, [logger, db_client, mo_code, mq_host])
+            (evt.EVT_CONN_CLOSE, handle_close, [logger, db_client, mq_host])
         ]
-        print(f'Starting Store SCU at {port} port for {mo_code}')
+        print(f'Starting Store SCU at {port} port')
         ae_app.start_server((address, port), evt_handlers=handlers)
 
 

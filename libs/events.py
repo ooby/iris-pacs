@@ -8,7 +8,7 @@ from pydicom.filewriter import write_file_meta_info
 from .io import get_studies
 
 
-def handle_store(event, LOGGER, db, code):
+def handle_store(event, LOGGER, db):
     studies = db['studies']
     study_record = studies.find_one({'assoc': event.assoc.name})
     path = study_record['path']
@@ -32,11 +32,10 @@ def handle_store(event, LOGGER, db, code):
     return 0x0000
 
 
-def handle_open(event, path, LOGGER, db, code):
+def handle_open(event, path, LOGGER, db):
     guid = str(uuid.uuid4())
     study_record = {'studyUid': guid,
                     'assoc': event.assoc.name,
-                    'mo_code': code,
                     'path': os.path.join(path, guid),
                     'created': datetime.datetime.utcnow()}
     studies = db['studies']
@@ -59,12 +58,12 @@ def handle_echo(event, LOGGER):
     return 0x0000
 
 
-def handle_close(event, LOGGER, db, code, MQ_HOST):
+def handle_close(event, LOGGER, db, MQ_HOST):
     studies = db['studies']
     study_record = studies.find_one({'assoc': event.assoc.name})
     queue = 'processing'
     message = study_record['studyUid']
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQ_HOST))
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQ_HOST, port=5672))
     channel = connection.channel()
     channel.queue_declare(queue=queue)
     channel.basic_publish(exchange='', routing_key=queue, body=message)
