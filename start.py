@@ -34,7 +34,7 @@ def main():
         ae_app.ae_title = b'IRIS-PACS'
         storage_sop_classes = []
         storage_sop_classes.append('1.2.840.10008.1.1')
-        storage_sop_classes.append('1.2.840.10008.5.1.4.1.1')
+        storage_sop_classes.append('1.2.840.10008.5.1.4.1.1.2')
         for uid in storage_sop_classes:
             ae_app.add_supported_context(uid, ALL_TRANSFER_SYNTAXES)
         client = pymongo.MongoClient(db_address, db_port)
