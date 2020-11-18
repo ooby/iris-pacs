@@ -13,10 +13,14 @@ def handle_store(event, LOGGER, db):
     study_record = studies.find_one({'assoc': event.assoc.name})
     path = study_record['path']
     if event.dataset.StudyDescription:
-        path = os.path.join(path, event.dataset.StudyDescription,
-                            event.dataset.SeriesDescription)
+        study_description = event.dataset.StudyDescription
     else:
-        path = os.path.join(path, event.dataset.StudyDescription)
+        study_description = 'default'
+    if event.dataset.SeriesDescription:
+        series_description = event.dataset.SeriesDescription
+    else:
+        series_description = 'default'
+    path = os.path.join(path, study_description, series_description)
     try:
         os.makedirs(path, exist_ok=True)
     except:
