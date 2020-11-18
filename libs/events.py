@@ -12,11 +12,11 @@ def handle_store(event, LOGGER, db):
     studies = db['studies']
     study_record = studies.find_one({'assoc': event.assoc.name})
     path = study_record['path']
-    if event.dataset.StudyDescription:
+    if 'StudyDescription' in event.dataset:
         study_description = event.dataset.StudyDescription
     else:
         study_description = 'default'
-    if event.dataset.SeriesDescription:
+    if 'SeriesDescription' in event.dataset:
         series_description = event.dataset.SeriesDescription
     else:
         series_description = 'default'
