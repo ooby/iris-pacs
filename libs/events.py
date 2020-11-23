@@ -67,10 +67,14 @@ def handle_close(event, LOGGER, db, MQ_HOST):
     study_record = studies.find_one({'assoc': event.assoc.name})
     queue = 'processing'
     message = study_record['studyUid']
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQ_HOST, port=5672))
-    channel = connection.channel()
-    channel.queue_declare(queue=queue)
-    channel.basic_publish(exchange='', routing_key=queue, body=message)
-    print(f'[x] Sent {message} for {queue} queue')
-    connection.close()
+    path = study_record['path']
+    if len(os.listdir(path)) > 0:
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQ_HOST, port=5672))
+        channel = connection.channel()
+        channel.queue_declare(queue=queue)
+        channel.basic_publish(exchange='', routing_key=queue, body=message)
+        print(f'[x] Sent {message} for {queue} queue')
+        connection.close()
+    else:
+        print('Association was aborted due to something')
     LOGGER.info(f'Connection closed with remote at { event.address }')
