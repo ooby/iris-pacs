@@ -40,7 +40,7 @@ def main():
         client = pymongo.MongoClient(db_address, db_port)
         db_client = client['iris-pacs']
         handlers = [
-            (evt.EVT_CONN_OPEN, handle_open, ['/data/scans', logger, db_client]),
+            (evt.EVT_CONN_OPEN, handle_open, [logger]),
             (evt.EVT_C_STORE, handle_store, [logger, db_client]),
             (evt.EVT_C_ECHO, handle_echo, [logger]),
             (evt.EVT_C_FIND, handle_find, [logger]),
