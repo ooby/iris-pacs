@@ -8,10 +8,37 @@ from pydicom.filewriter import write_file_meta_info
 from .io import get_studies
 
 
-def handle_store(event, LOGGER, db):
-    studies = db['studies']
-    study_record = studies.find_one({'assoc': event.assoc.name})
-    path = study_record['path']
+def check_sop_inst(guid, db):
+    sop_inst = db['sop_instances']
+    sop_inst_records = sop_inst.count_documents({'GUID': guid})
+    return sop_inst_records > 1
+
+
+def handle_store(event, logger, db):
+    '''Handle C-STORE request'''
+    sop_inst = db['sop_instances']
+    if 'InstitutionName' in event.dataset and 'StudyDate' in event.dataset and 'StudyTime' in event.dataset:
+        institution_name = event.dataset.InstitutionName
+        study_date = event.dataset.StudyDate
+        study_time = event.dataset.StudyTime
+    else:
+        return 0xC001
+    sop_inst_count = sop_inst.count_documents({
+        'InstitutionName': institution_name,
+        'StudyDate': study_date,
+        'StudyTime': study_time
+    })
+    if sop_inst_count > 0:
+        fisrt_si = sop_inst.find_one({
+            'InstitutionName': institution_name,
+            'StudyDate': study_date,
+            'StudyTime': study_time
+        })
+        guid = fisrt_si['GUID']
+        study_path = fisrt_si['PATH']
+    else:
+        guid = uuid.uuid4()
+        study_path = os.path.join('/data/scans', str(guid))
     if 'StudyDescription' in event.dataset:
         study_description = event.dataset.StudyDescription
     else:
@@ -20,61 +47,69 @@ def handle_store(event, LOGGER, db):
         series_description = event.dataset.SeriesDescription
     else:
         series_description = 'default'
-    path = os.path.join(path, study_description, series_description)
+    path = os.path.join(study_path, study_description, series_description)
     try:
         os.makedirs(path, exist_ok=True)
     except:
         return 0xC001
     fname = os.path.join(path, str(event.message_id) + '.dcm')
+    sop_instance_record = {
+        'StudyDescription': study_description,
+        'SeriesDescription': series_description,
+        'SOPInstanceFileName': str(event.message_id) + '.dcm',
+        'InstitutionName': institution_name,
+        'StudyDate': study_date,
+        'StudyTime': study_time,
+        'GUID': guid,
+        'PATH': study_path,
+        'ASSOC': event.assoc.name
+    }
     with open(fname, 'wb') as f:
         f.write(b'\x00' * 128)
         f.write(b'DICM')
         write_file_meta_info(f, event.file_meta)
         f.write(event.request.DataSet.getvalue())
-    LOGGER.info(f'Written data in { fname }')
-    LOGGER.info(f'C-STORE for {event.message_id}')
+        sop_inst.insert_one(sop_instance_record)
+    logger.info(f'Written data in { fname }')
+    logger.info(f'C-STORE for {event.message_id}')
     return 0x0000
 
 
-def handle_open(event, path, LOGGER, db):
-    guid = str(uuid.uuid4())
-    study_record = {'studyUid': guid,
-                    'assoc': event.assoc.name,
-                    'path': os.path.join(path, guid),
-                    'created': datetime.datetime.utcnow()}
-    studies = db['studies']
-    studies.insert_one(study_record)
-    LOGGER.info(f'Connected with remote at { event.address }')
+def handle_open(event, logger):
+    '''Handle opened connection with remote peer'''
+    logger.info(f'Connected with remote at { event.address }')
 
 
-def handle_find(event, LOGGER):
-    LOGGER.info(f'Handle a C-FIND request event')
+def handle_find(event, logger):
+    logger.info(f'Handle a C-FIND request event')
     return 0x0000
 
 
-def handle_get(event, LOGGER):
-    LOGGER.info(f'Handle a C-GET request event')
+def handle_get(event, logger):
+    logger.info(f'Handle a C-GET request event')
     return 0x0000
 
 
-def handle_echo(event, LOGGER):
-    LOGGER.info(f'C-ECHO OK was sent for { event.assoc }')
+def handle_echo(event, logger):
+    logger.info(f'C-ECHO OK was sent for { event.assoc }')
     return 0x0000
 
 
-def handle_close(event, LOGGER, db, MQ_HOST):
-    studies = db['studies']
-    study_record = studies.find_one({'assoc': event.assoc.name})
+def handle_close(event, logger, db, MQ_HOST):
+    '''Handle close connection with remote peer'''
+    sop_inst = db['sop_instances']
+    sop_inst_record = sop_inst.find_one({'ASSOC': event.assoc.name})
     queue = 'processing'
-    message = study_record['studyUid']
-    path = study_record['path']
-    if len(os.listdir(path)) > 0:
-        connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQ_HOST, port=5672))
+    message = sop_inst_record['GUID']
+    if check_sop_inst(message, db):
+        message = str(message)
+        connection = pika.BlockingConnection(
+            pika.ConnectionParameters(host=MQ_HOST, port=5672))
         channel = connection.channel()
         channel.queue_declare(queue=queue)
         channel.basic_publish(exchange='', routing_key=queue, body=message)
-        print(f'[x] Sent {message} for {queue} queue')
+        print(f'[v] Sent {message} for {queue} queue')
         connection.close()
     else:
         print('Association was aborted due to something')
-    LOGGER.info(f'Connection closed with remote at { event.address }')
+    logger.info(f'Connection closed with remote at { event.address }')
