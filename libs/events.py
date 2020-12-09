@@ -1,3 +1,4 @@
+from bson.son import SON
 import datetime
 import os
 import pika
@@ -9,14 +10,31 @@ from .io import get_studies
 
 
 def check_sop_inst(guid, db):
-    sop_inst = db['sop_instances']
+    '''Count SOPInstaces refer to GUID and update/insert study record'''
+    sop_inst = db['instances']
     sop_inst_records = sop_inst.count_documents({'GUID': guid})
+    aggregation_pipeline = [
+        {'$match': {'GUID': guid}},
+        {'$group': {'_id': '$SeriesInstanceUID'}},
+        {'$count': 'count'}
+    ]
+    series = list(db['instances'].aggregate(aggregation_pipeline))
+    sop_stud = db['studies']
+    _ = sop_stud.find_one_and_update({
+            'GUID': guid
+        }, {
+            '$set': {
+                'ImagesInStudy': sop_inst_records,
+                'SeriesInStudy': series[0]['count'],
+                'PATH': os.path.join('/data/scans', str(guid)),
+                }
+        }, upsert=True)
     return sop_inst_records > 1
 
 
 def handle_store(event, logger, db):
     '''Handle C-STORE request'''
-    sop_inst = db['sop_instances']
+    sop_inst = db['instances']
     if 'InstitutionName' in event.dataset and 'StudyDate' in event.dataset and 'StudyTime' in event.dataset:
         institution_name = event.dataset.InstitutionName
         study_date = event.dataset.StudyDate
@@ -52,17 +70,22 @@ def handle_store(event, logger, db):
         os.makedirs(path, exist_ok=True)
     except:
         return 0xC001
-    fname = os.path.join(path, str(event.message_id) + '.dcm')
+    filename = event.dataset.SOPInstanceUID
+    fname = os.path.join(path, filename + '.dcm')
     sop_instance_record = {
         'StudyDescription': study_description,
         'SeriesDescription': series_description,
-        'SOPInstanceFileName': str(event.message_id) + '.dcm',
+        'SOPInstanceFileName': filename + '.dcm',
+        'StudyInstanceUID': event.dataset.StudyInstanceUID,
+        'SeriesInstanceUID': event.dataset.SeriesInstanceUID,
+        'SOPInstanceUID': event.dataset.SOPInstanceUID,
         'InstitutionName': institution_name,
         'StudyDate': study_date,
         'StudyTime': study_time,
         'GUID': guid,
         'PATH': study_path,
-        'ASSOC': event.assoc.name
+        'ASSOC': event.assoc.name,
+        'Created': datetime.datetime.utcnow()
     }
     with open(fname, 'wb') as f:
         f.write(b'\x00' * 128)
@@ -97,7 +120,7 @@ def handle_echo(event, logger):
 
 def handle_close(event, logger, db, MQ_HOST):
     '''Handle close connection with remote peer'''
-    sop_inst = db['sop_instances']
+    sop_inst = db['instances']
     sop_inst_record = sop_inst.find_one({'ASSOC': event.assoc.name})
     queue = 'processing'
     message = sop_inst_record['GUID']
