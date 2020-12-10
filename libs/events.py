@@ -123,7 +123,12 @@ def handle_close(event, logger, db, MQ_HOST):
     sop_inst = db['instances']
     sop_inst_record = sop_inst.find_one({'ASSOC': event.assoc.name})
     queue = 'processing'
-    message = sop_inst_record['GUID']
+    if sop_inst_record:
+        message = sop_inst_record['GUID']
+        print('Association was aborted due to something')
+        logger.info(f'Connection closed with remote at { event.address }')
+    else:
+        return
     if check_sop_inst(message, db):
         message = str(message)
         connection = pika.BlockingConnection(
