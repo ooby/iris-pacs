@@ -6,3 +6,4 @@ __pycache__
 mqtest_receive.py
 mqtest_send.py
 db_test.py
+config.ini

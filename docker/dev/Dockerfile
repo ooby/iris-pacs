@@ -10,15 +10,6 @@ ARG TIMEZONE
 ENV TZ="${TIMEZONE}"
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-ARG PORT
-RUN touch /port && echo "${PORT}" > /port
-ARG MQ_HOST 
-RUN touch /mq_host && echo "${MQ_HOST}" > /mq_host
-ARG DB_ADDRESS
-RUN touch /db_address && echo "${DB_ADDRESS}" > /db_address
-ARG DB_PORT
-RUN touch db_port && echo "${DB_PORT}" > /db_port
-
 RUN mkdir /data
 RUN mkdir /data/scans
 WORKDIR /data
