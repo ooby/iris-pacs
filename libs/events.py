@@ -1,4 +1,3 @@
-from bson.son import SON
 import datetime
 import os
 import pika
@@ -118,7 +117,7 @@ def handle_echo(event, logger):
     return 0x0000
 
 
-def handle_close(event, logger, db, MQ_HOST):
+def handle_close(event, logger, db, mq_host, mq_port):
     '''Handle close connection with remote peer'''
     sop_inst = db['instances']
     sop_inst_record = sop_inst.find_one({'ASSOC': event.assoc.name})
@@ -132,7 +131,7 @@ def handle_close(event, logger, db, MQ_HOST):
     if check_sop_inst(message, db):
         message = str(message)
         connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=MQ_HOST, port=5672))
+            pika.ConnectionParameters(host=mq_host, port=mq_port))
         channel = connection.channel()
         channel.queue_declare(queue=queue)
         channel.basic_publish(exchange='', routing_key=queue, body=message)
