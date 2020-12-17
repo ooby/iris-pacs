@@ -11,7 +11,8 @@ from pynetdicom import AE, build_context, evt, debug_logger
 
 def main():
     '''Main'''
-    config = configparser.ConfigParser(converters = {'list': lambda x: [i.strip("[]") for i in x.split(',')]})
+    config = configparser.ConfigParser(
+        converters={'list': lambda x: [i.strip("[]") for i in x.split(',')]})
     config_file_name = os.path.abspath('./config.ini')
     try:
         with open(config_file_name, 'r') as config_file:
@@ -43,7 +44,8 @@ def main():
         (evt.EVT_C_ECHO, handle_echo, [logger]),
         (evt.EVT_C_FIND, handle_find, [logger]),
         (evt.EVT_C_GET, handle_get, [logger]),
-        (evt.EVT_CONN_CLOSE, handle_close, [logger, db_client, mq_host, mq_port])
+        (evt.EVT_CONN_CLOSE, handle_close, [
+         logger, db_client, mq_host, mq_port])
     ]
     print(f'Starting Store SCU at {port} port')
     ae_app.start_server((address, port), evt_handlers=handlers)

@@ -20,14 +20,14 @@ def check_sop_inst(guid, db):
     series = list(db['instances'].aggregate(aggregation_pipeline))
     sop_stud = db['studies']
     _ = sop_stud.find_one_and_update({
-            'GUID': guid
-        }, {
-            '$set': {
-                'ImagesInStudy': sop_inst_records,
-                'SeriesInStudy': series[0]['count'],
-                'PATH': os.path.join('/data/scans', str(guid)),
-                }
-        }, upsert=True)
+        'GUID': guid
+    }, {
+        '$set': {
+            'ImagesInStudy': sop_inst_records,
+            'SeriesInStudy': series[0]['count'],
+            'PATH': os.path.join('/data/scans', str(guid)),
+        }
+    }, upsert=True)
     return sop_inst_records > 1
 
 
