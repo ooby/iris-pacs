@@ -13,7 +13,7 @@ def main():
     '''Main'''
     config = configparser.ConfigParser(
         converters={'list': lambda x: [i.strip("[]") for i in x.split(',')]})
-    config_file_name = os.path.abspath('./config.ini')
+    config_file_name = os.path.abspath('/data/config.ini')
     try:
         with open(config_file_name, 'r') as config_file:
             config.read_file(config_file)
