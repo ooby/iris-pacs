@@ -12,22 +12,6 @@ def check_sop_inst(guid, db):
     '''Count SOPInstaces refer to GUID and update/insert study record'''
     sop_inst = db['instances']
     sop_inst_records = sop_inst.count_documents({'GUID': guid})
-    aggregation_pipeline = [
-        {'$match': {'GUID': guid}},
-        {'$group': {'_id': '$SeriesInstanceUID'}},
-        {'$count': 'count'}
-    ]
-    series = list(db['instances'].aggregate(aggregation_pipeline))
-    sop_stud = db['studies']
-    _ = sop_stud.find_one_and_update({
-        'GUID': guid
-    }, {
-        '$set': {
-            'ImagesInStudy': sop_inst_records,
-            'SeriesInStudy': series[0]['count'],
-            'PATH': os.path.join('/data/scans', str(guid)),
-        }
-    }, upsert=True)
     return sop_inst_records > 1
 
 
