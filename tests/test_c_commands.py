@@ -22,7 +22,7 @@ TEST_PATH = batch_reader('../scans')[0]['path']
 
 
 def test_c_echo():
-    '''C-STORE test'''
+    '''C-ECHO test'''
     ae = AE()
     ae.add_requested_context(VerificationSOPClass)
     assoc = ae.associate(IP_ADDRESS, PORT)
