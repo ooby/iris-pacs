@@ -29,6 +29,7 @@ def main():
                 ds.SeriesDescription = 'Lung 1.0 B70s'
                 ds.StudyDate = study_date
                 ds.StudyTime = study_time
+                ds.PatientName = 'Anonymous Patient'
             status = assoc.send_c_store(ds)
             print(status)
         assoc.release()
