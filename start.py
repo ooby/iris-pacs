@@ -8,6 +8,7 @@ import pymongo
 from libs.events import handle_echo, handle_find, handle_get, handle_close, handle_open, handle_store
 from libs.events import transfer_open, transfer_close, transfer_store
 from pynetdicom import AE, build_context, evt, debug_logger
+from pynetdicom.sop_class import CTImageStorage, BasicTextSRStorage, MultiframeTrueColorSecondaryCaptureImageStorage, SecondaryCaptureImageStorage, VerificationSOPClass
 
 
 def main():
@@ -44,18 +45,15 @@ def main():
         (evt.EVT_C_FIND, handle_find, [logger]),
         (evt.EVT_C_GET, handle_get, [logger])
     ]
-    if int(config['IRIS-PACS']['port']) == 1:
+    if int(config['IRIS-PACS']['mode']) == 1:
         handlers.append((evt.EVT_CONN_OPEN, handle_open, [logger]))
         handlers.append((evt.EVT_C_STORE, handle_store, [logger, db_client]))
         handlers.append((evt.EVT_CONN_CLOSE, handle_close, [
                         logger, db_client, mq_host, mq_port]))
     else:
         target_ae = AE()
-        for uid in ctx:
-            _uid = str(uid).strip("' ")
-            ssc = build_context(_uid)
-            target_ae.add_requested_context(
-                ssc.abstract_syntax, ssc.transfer_syntax)
+        for item in [CTImageStorage, BasicTextSRStorage, MultiframeTrueColorSecondaryCaptureImageStorage, SecondaryCaptureImageStorage, VerificationSOPClass]:
+            target_ae.add_requested_context(item)
         target_address = config['GW-TARGET']['address']
         target_port = config['GW-TARGET']['port']
         assoc = None
@@ -64,7 +62,7 @@ def main():
         handlers.append((evt.EVT_C_STORE, transfer_store,
                          [logger, db_client, assoc]))
         handlers.append(
-            (evt.EVT_CONN_CLOSE, transfer_close, [logger, assoc]))   
+            (evt.EVT_CONN_CLOSE, transfer_close, [logger, assoc]))
     print(f'Starting Store SCU at {port} port')
     ae_app.start_server((address, port), evt_handlers=handlers)
 

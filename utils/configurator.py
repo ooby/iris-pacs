@@ -116,7 +116,7 @@ def main():
 
     config = configparser.ConfigParser()
     if work_mode == 1:
-        config['IRIS-PACS'] = {'port': port}
+        config['IRIS-PACS'] = {'port': port, 'mode': work_mode}
     else:
         config['IRIS-PACS'] = {
             'port': port,
