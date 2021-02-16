@@ -7,6 +7,8 @@ from pydicom.dataset import Dataset
 from pydicom.filewriter import write_file_meta_info
 from .io import get_studies
 
+associations = {}
+
 
 def check_sop_inst(guid, db):
     '''Count SOPInstaces refer to GUID and update/insert study record'''
@@ -15,7 +17,7 @@ def check_sop_inst(guid, db):
     return sop_inst_records > 1
 
 
-def transfer_store(event, logger, db, assoc):
+def transfer_store(event, logger, db):
     '''Handle C-STORE request and transfer to DICOM-gateway target'''
     sop_inst = db['instances']
     if 'InstitutionName' in event.dataset and 'StudyDate' in event.dataset and 'StudyTime' in event.dataset:
@@ -60,7 +62,10 @@ def transfer_store(event, logger, db, assoc):
         'Created': datetime.datetime.utcnow()
     }
     sop_inst.insert_one(sop_instance_record)
-    status = assoc.send_c_store(event.dataset)
+    assoc = associations[str(event.assoc.name)]
+    ds = event.dataset
+    ds.file_meta = event.file_meta
+    status = assoc.send_c_store(ds)
     logger.info(f'C-STORE status: { status }')
     return 0x0000
 
@@ -69,15 +74,18 @@ def transfer_open(event, logger, assoc, target_ae, target_address, target_port):
     '''Handle open connnection and open connection to DICOM-gateway target'''
     assoc = target_ae.associate(target_address, int(target_port))
     if assoc.is_established:
+        associations[str(event.assoc.name)] = assoc
         logger.info(f'Connected with remote at { target_address } for transfers')
     else:
         logger.info(f'Association to { target_address } target rejected, aborted or never connected')
     logger.info(f'Connected with remote at { event.address }')
 
 
-def transfer_close(event, logger, assoc, target_address):
+def transfer_close(event, logger, target_address):
     '''Handle close connection and close connection to DICOM-gateway target'''
+    assoc = associations[str(event.assoc.name)]
     assoc.release()
+    del associations[str(event.assoc.name)]
     logger.info(f'Connection closed with remote at { event.address }')
     logger.info(f'Connection closed with remote at { target_address } for transfers')
 

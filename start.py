@@ -60,9 +60,9 @@ def main():
         handlers.append(
             (evt.EVT_CONN_OPEN, transfer_open, [logger, assoc, target_ae, target_address, target_port]))
         handlers.append((evt.EVT_C_STORE, transfer_store,
-                         [logger, db_client, assoc]))
+                         [logger, db_client]))
         handlers.append(
-            (evt.EVT_CONN_CLOSE, transfer_close, [logger, assoc]))
+            (evt.EVT_CONN_CLOSE, transfer_close, [logger, target_address]))
     print(f'Starting Store SCU at {port} port')
     ae_app.start_server((address, port), evt_handlers=handlers)
 
