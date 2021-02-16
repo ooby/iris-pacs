@@ -5,8 +5,10 @@ import os
 import sys
 import pymongo
 
-from libs.events import handle_close, handle_open, handle_store, handle_echo, handle_find, handle_get
+from libs.events import handle_echo, handle_find, handle_get, handle_close, handle_open, handle_store
+from libs.events import transfer_open, transfer_close, transfer_store
 from pynetdicom import AE, build_context, evt, debug_logger
+from pynetdicom.sop_class import CTImageStorage, BasicTextSRStorage, MultiframeTrueColorSecondaryCaptureImageStorage, SecondaryCaptureImageStorage, VerificationSOPClass
 
 
 def main():
@@ -39,14 +41,28 @@ def main():
     client = pymongo.MongoClient(db_address, db_port)
     db_client = client['iris-pacs']
     handlers = [
-        (evt.EVT_CONN_OPEN, handle_open, [logger]),
-        (evt.EVT_C_STORE, handle_store, [logger, db_client]),
         (evt.EVT_C_ECHO, handle_echo, [logger]),
         (evt.EVT_C_FIND, handle_find, [logger]),
-        (evt.EVT_C_GET, handle_get, [logger]),
-        (evt.EVT_CONN_CLOSE, handle_close, [
-         logger, db_client, mq_host, mq_port])
+        (evt.EVT_C_GET, handle_get, [logger])
     ]
+    if int(config['IRIS-PACS']['mode']) == 1:
+        handlers.append((evt.EVT_CONN_OPEN, handle_open, [logger]))
+        handlers.append((evt.EVT_C_STORE, handle_store, [logger, db_client]))
+        handlers.append((evt.EVT_CONN_CLOSE, handle_close, [
+                        logger, db_client, mq_host, mq_port]))
+    else:
+        target_ae = AE()
+        for item in [CTImageStorage, BasicTextSRStorage, MultiframeTrueColorSecondaryCaptureImageStorage, SecondaryCaptureImageStorage, VerificationSOPClass]:
+            target_ae.add_requested_context(item)
+        target_address = config['GW-TARGET']['address']
+        target_port = config['GW-TARGET']['port']
+        assoc = None
+        handlers.append(
+            (evt.EVT_CONN_OPEN, transfer_open, [logger, assoc, target_ae, target_address, target_port]))
+        handlers.append((evt.EVT_C_STORE, transfer_store,
+                         [logger, db_client]))
+        handlers.append(
+            (evt.EVT_CONN_CLOSE, transfer_close, [logger, target_address]))
     print(f'Starting Store SCU at {port} port')
     ae_app.start_server((address, port), evt_handlers=handlers)
 

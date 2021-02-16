@@ -7,12 +7,87 @@ from pydicom.dataset import Dataset
 from pydicom.filewriter import write_file_meta_info
 from .io import get_studies
 
+associations = {}
+
 
 def check_sop_inst(guid, db):
     '''Count SOPInstaces refer to GUID and update/insert study record'''
     sop_inst = db['instances']
     sop_inst_records = sop_inst.count_documents({'GUID': guid})
     return sop_inst_records > 1
+
+
+def transfer_store(event, logger, db):
+    '''Handle C-STORE request and transfer to DICOM-gateway target'''
+    sop_inst = db['instances']
+    if 'InstitutionName' in event.dataset and 'StudyDate' in event.dataset and 'StudyTime' in event.dataset:
+        institution_name = event.dataset.InstitutionName
+        study_date = event.dataset.StudyDate
+        study_time = event.dataset.StudyTime
+    else:
+        return 0xC001
+    sop_inst_count = sop_inst.count_documents({
+        'InstitutionName': institution_name,
+        'StudyDate': study_date,
+        'StudyTime': study_time
+    })
+    if sop_inst_count > 0:
+        fisrt_si = sop_inst.find_one({
+            'InstitutionName': institution_name,
+            'StudyDate': study_date,
+            'StudyTime': study_time
+        })
+        guid = fisrt_si['GUID']
+    else:
+        guid = uuid.uuid4()
+    if 'StudyDescription' in event.dataset:
+        study_description = event.dataset.StudyDescription
+    else:
+        study_description = 'default'
+    if 'SeriesDescription' in event.dataset:
+        series_description = event.dataset.SeriesDescription
+    else:
+        series_description = 'default'
+    sop_instance_record = {
+        'StudyDescription': study_description,
+        'SeriesDescription': series_description,
+        'StudyInstanceUID': event.dataset.StudyInstanceUID,
+        'SeriesInstanceUID': event.dataset.SeriesInstanceUID,
+        'SOPInstanceUID': event.dataset.SOPInstanceUID,
+        'InstitutionName': institution_name,
+        'StudyDate': study_date,
+        'StudyTime': study_time,
+        'GUID': guid,
+        'ASSOC': event.assoc.name,
+        'Created': datetime.datetime.utcnow()
+    }
+    sop_inst.insert_one(sop_instance_record)
+    assoc = associations[str(event.assoc.name)]
+    ds = event.dataset
+    ds.file_meta = event.file_meta
+    status = assoc.send_c_store(ds)
+    logger.info(f'C-STORE status: { status }')
+    return 0x0000
+
+
+def transfer_open(event, logger, assoc, target_ae, target_address, target_port):
+    '''Handle open connnection and open connection to DICOM-gateway target'''
+    assoc = target_ae.associate(target_address, int(target_port))
+    if assoc.is_established:
+        associations[str(event.assoc.name)] = assoc
+        logger.info(f'Connected with remote at { target_address } for transfers')
+    else:
+        logger.info(f'Association to { target_address } target rejected, aborted or never connected')
+    logger.info(f'Connected with remote at { event.address }')
+
+
+def transfer_close(event, logger, target_address):
+    '''Handle close connection and close connection to DICOM-gateway target'''
+    assoc = associations[str(event.assoc.name)]
+    assoc.release()
+    del associations[str(event.assoc.name)]
+    logger.info(f'Connection closed with remote at { event.address }')
+    logger.info(f'Connection closed with remote at { target_address } for transfers')
 
 
 def handle_store(event, logger, db):
