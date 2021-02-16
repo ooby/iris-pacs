@@ -37,6 +37,30 @@ def main():
     '''Main'''
     print(' - IRIS-PACS configuration tool:')
 
+    print('Choose work mode [1: PACS-server (by default), 2: DICOM-gateway]: ')
+    work_mode = answer = 1
+    answer = input()
+    if answer.isdigit() and int(answer) in (1, 2):
+        work_mode = int(answer)
+    
+    gw_target_address = None
+    if int(work_mode) == 2:
+        print('Enter DICOM-gateway target IP address (xxx.xxx.xxx.xxx):')
+        gw_target_address = input()
+        if is_valid_ipv4(gw_target_address):
+            gw_target_address = str(gw_target_address)
+        else:
+            print('Entered address is not valid ipv4')
+            sys.exit(0)
+    
+    gw_target_port = None
+    if int(work_mode) == 2:
+        gw_target_port = 104
+        print('Enter DICOM-gateway target IP port (default: 104):')
+        answer = input()
+        if answer.isdigit():
+            gw_target_port = int(answer)
+
     print('Enter storage presentation contexts config variant [1: Basic (by default), 2: Full]: ')
     variant = answer = 1
     answer = input()
@@ -78,6 +102,11 @@ def main():
         mq_port = int(answer)
 
     print('\n')
+    print(f'Work mode: {work_mode}')
+    if gw_target_address:
+        print(f'DICOM-gateway target address: {gw_target_address}')
+    if gw_target_port:
+        print(f'DICOM-gateway target port: {gw_target_port}')
     print(f'Storage presentation contexts config variant: {variant}')
     print(f'IRIS-PACS port: {port}')
     print(f'MongoDB server IP address: {db_address}')
@@ -86,7 +115,17 @@ def main():
     print(f'RabbitMQ server port: {mq_port}')
 
     config = configparser.ConfigParser()
-    config['IRIS-PACS'] = {'port': port}
+    if work_mode == 1:
+        config['IRIS-PACS'] = {'port': port}
+    else:
+        config['IRIS-PACS'] = {
+            'port': port,
+            'mode': work_mode
+            }
+        config['GW-TARGET'] = {
+            'address': gw_target_address,
+            'port': gw_target_port
+        }
     config['MongoDB'] = {
             'address': db_address,
             'port': db_port
