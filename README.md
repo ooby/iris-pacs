@@ -18,7 +18,7 @@ docker build docker/prod -t iris-pacs --build-arg TIMEZONE="Asia/Yakutsk"
 ```
 3. Запустить `docker`-контейнер c правильными аргументами
 ```bash
-docker run --restart always -dit -v $PWD:/data -p 104:104 iris-pacs
+docker run --log-opt max-size=512k --log-opt max-file=1 --restart always -dit -v $PWD:/data -p 104:104 iris-pacs
 ```
 
 ### Все вопросы на info@sciberia.io
